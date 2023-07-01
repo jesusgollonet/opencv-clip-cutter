@@ -16,4 +16,9 @@ I haven't done any OPENCV in many years, and never used pyhton before, so I
 expect this project to be a learning ground too. 
 
 
+## How to run
 
+```bash
+pip install -r requirements.txt
+python main.py
+```
