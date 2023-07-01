@@ -1,7 +1,7 @@
 # OPENCV CLIP CUTTER
 
 ## Intro
-When going ot for a skate or BMX session, I often set up a tripod and record
+When going out for a skate or BMX session, I often set up a tripod and record
 it in order to analyze technique, check progression and find areas to improve. 
 I then edit the clips in iMovie to remove everything but whatever trick I'm
 doing. This is an attempt to automate that process. 
