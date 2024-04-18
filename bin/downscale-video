@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+echo "bin/downscale-video"
+
+main() {
+    local source=$1
+    local target=$2
+    local target_width=$3
+    local target_frame_rate=$4
+    if [ -z "$source" ] && [ -z "$target" ]; then
+        echo "Usage: bin/downscale-video <source> <target> [target_width] [target_frame_rate]"
+        echo "ffmpeg -i video/test.mov -vf scale=128:-1 -r 15 video/resized.mp4"
+        exit 1
+    fi
+
+    if [ -z "$source" ]; then
+        echo "source is required e.g: video/test.mov"
+        exit 1
+    fi
+    if [ -z "$target" ]; then
+        echo "target is required. e.g: video.output.mp4"
+        exit 1
+    fi
+    if [ -z "$target_width" ]; then
+        target_width=128
+    fi
+    if [ -z "$target_frame_rate" ]; then
+        target_frame_rate=15
+    fi
+    ffmpeg -i "$source" -vf scale="$target_width":-1 -r "$target_frame_rate" "$target"
+}
+
+main "$@"
