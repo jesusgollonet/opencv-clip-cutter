@@ -66,6 +66,17 @@ for i in range(total_frames):
 
 print("segment_frames", segment_times)
 
+
+def format_time(seconds):
+    return (
+        str(int(seconds // 3600)).zfill(2)
+        + ":"
+        + str(int((seconds % 3600) // 60)).zfill(2)
+        + ":"
+        + str(int(seconds % 60)).zfill(2)
+    )
+
+
 # filter out segments that hav e no end time
 segment_times = [times for times in segment_times if len(times) == 2]
 # write a list of segments to a text file in the format 00:00:00 - 00:00:00
@@ -75,21 +86,7 @@ with open("output/segments.txt", "w") as f:
         # convert end to duration
         duration = end - start
         # convert start and end times to a string in the format 00:00:00
-        start_str = (
-            str(int(start // 3600)).zfill(2)
-            + ":"
-            + str(int((start % 3600) // 60)).zfill(2)
-            + ":"
-            + str(int(start % 60)).zfill(2)
-        )
-        duration_str = (
-            str(int(duration // 3600)).zfill(2)
-            + ":"
-            + str(int((duration % 3600) // 60)).zfill(2)
-            + ":"
-            + str(int(duration % 60)).zfill(2)
-        )
-        f.write(f"{start_str} {duration_str}\n")
+        f.write(f"{format_time(start)} {format_time(duration)}\n")
 
 
 def make_mosaic(source_frames, cols):
