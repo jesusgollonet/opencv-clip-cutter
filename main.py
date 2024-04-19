@@ -18,8 +18,9 @@ frame_h = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 cols = 20
 
-
 bs = cv.createBackgroundSubtractorKNN()
+
+non_white_ar = []
 
 # store frames
 for i in range(total_frames):
@@ -35,6 +36,18 @@ for i in range(total_frames):
 
     frames.append(frame)
     bw_frames.append(bw_frame)
+    white_px = cv.countNonZero(fg_mask)
+    non_white_ar.append(white_px)
+    cv.putText(
+        fg_mask,
+        white_px.__str__(),
+        (10, 10),
+        cv.FONT_HERSHEY_PLAIN,
+        1,
+        (255, 255, 255),
+        2,
+        cv.FILLED,
+    )
     bs_frames.append(fg_mask)
 
 
@@ -58,5 +71,5 @@ for i, frame in enumerate(frames):
 cv.imwrite("output/mosaic.jpg", mosaic)
 cv.imwrite("output/mosaic_bw.jpg", bw_mosaic)
 cv.imwrite("output/mosaic_bs.jpg", bs_mosaic)
-cv.imshow("Mosaic", bw_mosaic)
+cv.imshow("Mosaic", bs_mosaic)
 cv.waitKey(0)
