@@ -3,6 +3,7 @@
 video/*.mov
 video/*.mp4
 output/*.jpg
+output/*.png
 .DS_Store
 
 ### Python ###

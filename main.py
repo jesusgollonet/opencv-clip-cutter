@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-video_path = "video/2024-02-22 21.35.35.mov.resized.mp4"
+video_path = "video/2024-02-22 22.06.36.mov.resized.mp4"
 
 cap = cv.VideoCapture(video_path)
 bs = cv.createBackgroundSubtractorKNN()
@@ -89,7 +89,4 @@ def make_mosaic(source_frames, cols):
     return mosaic
 
 
-cv.imshow("Mosaic", make_mosaic(bs_frames, 20))
-cv.waitKey(0)
-cv.imshow("Mosaic", make_mosaic(frames, 50))
-cv.waitKey(0)
+cv.imwrite("output/mosaic.png", make_mosaic(bs_frames, 20))
