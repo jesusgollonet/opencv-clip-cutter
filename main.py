@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 
-video_path = "video/resized.mp4"
+video_path = "video/resized-long.mp4"
 
 cap = cv.VideoCapture(video_path)
 
@@ -13,6 +13,14 @@ c = 0
 
 frame_w = int(cap.get(cv.CAP_PROP_FRAME_WIDTH))
 frame_h = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+fps = int(cap.get(cv.CAP_PROP_FPS))
+
+movement_start_threshold = 30
+movement_end_threshold = 20
+
+movement_detected = False
+
+print("fps:", fps)
 
 # total number of frames in the video
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
@@ -37,10 +45,17 @@ for i in range(total_frames):
     frames.append(frame)
     bw_frames.append(bw_frame)
     white_px = cv.countNonZero(fg_mask)
+    if (not movement_detected) and white_px > movement_start_threshold:
+        movement_detected = True
+        print("Movement detected at frame:", i)
+    if movement_detected and white_px < movement_end_threshold:
+        movement_detected = False
+        print("Movement ended at frame:", i)
+
     non_white_ar.append(white_px)
     cv.putText(
         fg_mask,
-        white_px.__str__(),
+        white_px.__str__() + "-> " + movement_detected.__str__(),
         (10, 10),
         cv.FONT_HERSHEY_PLAIN,
         1,
