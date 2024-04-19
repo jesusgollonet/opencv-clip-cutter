@@ -4,6 +4,7 @@ video/*.mov
 video/*.mp4
 output/*.jpg
 output/*.png
+output/*.txt
 .DS_Store
 
 ### Python ###

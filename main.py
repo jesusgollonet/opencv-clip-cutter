@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 
-video_path = "video/2024-02-22 22.06.36.mov.resized.mp4"
+video_path = "video/2024-01-13 08.38.31.mov.resized.mp4"
 
 cap = cv.VideoCapture(video_path)
 bs = cv.createBackgroundSubtractorKNN()
@@ -20,6 +20,9 @@ frames = []
 bs_frames = []
 non_white_ar = []
 
+segment_count = 0
+# array to store start and end times of each segment
+segment_times = []
 # store frames
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 for i in range(total_frames):
@@ -41,9 +44,13 @@ for i in range(total_frames):
     if (not movement_detected) and white_px > movement_start_threshold:
         movement_detected = True
         print("Movement detected at frame:", i)
+        # store start time
+        segment_times.append([i / fps])
     if movement_detected and white_px < movement_end_threshold:
         movement_detected = False
         print("Movement ended at frame:", i)
+        # store end time
+        segment_times[-1].append(i / fps)
 
     cv.putText(
         fg_mask,
@@ -57,7 +64,32 @@ for i in range(total_frames):
     )
 
 
-# create a blank mosaic with the correct dimensions
+print("segment_frames", segment_times)
+
+# filter out segments that hav e no end time
+segment_times = [times for times in segment_times if len(times) == 2]
+# write a list of segments to a text file in the format 00:00:00 - 00:00:00
+# start_time duration
+with open("output/segments.txt", "w") as f:
+    for start, end in segment_times:
+        # convert end to duration
+        duration = end - start
+        # convert start and end times to a string in the format 00:00:00
+        start_str = (
+            str(int(start // 3600)).zfill(2)
+            + ":"
+            + str(int((start % 3600) // 60)).zfill(2)
+            + ":"
+            + str(int(start % 60)).zfill(2)
+        )
+        duration_str = (
+            str(int(duration // 3600)).zfill(2)
+            + ":"
+            + str(int((duration % 3600) // 60)).zfill(2)
+            + ":"
+            + str(int(duration % 60)).zfill(2)
+        )
+        f.write(f"{start_str} {duration_str}\n")
 
 
 def make_mosaic(source_frames, cols):
