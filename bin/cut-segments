@@ -7,7 +7,6 @@ echo "bin/cut-segments"
 main(){
     input="video/2024-01-13 08.38.31.mov"
     while IFS=' ' read -r start duration; do
-        echo $start $duration
         ffmpeg -nostdin -i "$input" -ss "$start" -t "$duration"  -c:v libx264 -c:a aac -metadata:s:v rotate="0" "output_${start//[:]/-}_to_${duration//[:]/-}.mp4"
     done < "output/segments.txt"
 
