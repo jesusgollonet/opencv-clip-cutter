@@ -1,14 +1,15 @@
 import cv2 as cv
-import numpy as np
 from cc_utils import video_utils as vu
 
 source_path = "video/2024-01-13 08.38.31.mov"
-target_path = "output/downscaled.mp4"
+target_path = "video/downscaled.mp4"
+clip_cutter_input_video = source_path
 target_fps = 2
 target_width = 128
-print(vu.is_video_downscaled(source_path, target_width, target_fps))
+
 if not vu.is_video_downscaled(source_path, target_width, target_fps):
     vu.downscale_video(source_path, target_path, target_width, target_fps)
+    clip_cutter_input_video = target_path
 
 
 cap = cv.VideoCapture(target_path)
@@ -72,58 +73,19 @@ for i in range(total_frames):
     )
 
 
-print("segment_frames", segment_times)
-
-
-def format_time(seconds):
-    return (
-        str(int(seconds // 3600)).zfill(2)
-        + ":"
-        + str(int((seconds % 3600) // 60)).zfill(2)
-        + ":"
-        + str(int(seconds % 60)).zfill(2)
-    )
-
-
 # filter out segments that hav e no end time
 segment_times = [times for times in segment_times if len(times) == 2]
 # write a list of segments to a text file in the format 00:00:00 - 00:00:00
 # start_time duration
-with open("output/segments.txt", "w") as f:
-    for start, end in segment_times:
-        # convert end to duration
-        duration = end - start
-        # convert start and end times to a string in the format 00:00:00
-        f.write(f"{format_time(start)} {format_time(duration)}\n")
+for segment_count, (start, end) in enumerate(segment_times):
+    # convert end to duration
+    duration = end - start
+    vu.cut_video_segment(
+        source_path,
+        f"output/segment_{segment_count}.mp4",
+        vu.format_time(start),
+        vu.format_time(duration),
+    )
 
-
-def make_mosaic(source_frames, cols):
-    initial_frame = source_frames[0]
-    # given the total number of frames and the number of columns
-    # calculate the number of rows for the mosaic
-    # note the +1 to account for the last row
-
-    mosaic_rows = (len(source_frames) // cols) + 1
-    frame_h, frame_w = initial_frame.shape[:2]
-    # initial tuple will be (frame_h, frame_w, frame_channels) if it's a color image
-    # and (frame_h, frame_w) if it's a grayscale image
-
-    # Determine whether the image is grayscale or color
-    if len(initial_frame.shape) == 2:
-        # Grayscale image
-        mosaic_shape = (mosaic_rows * frame_h, cols * frame_w)
-    else:
-        # Color image, use 3 for RGB channels
-        frame_channels = initial_frame.shape[2]  # typically 3 for RGB
-        mosaic_shape = (mosaic_rows * frame_h, cols * frame_w, frame_channels)
-
-    mosaic = np.zeros(mosaic_shape, dtype=np.uint8)
-
-    for i, frame in enumerate(source_frames):
-        x = int((i % cols) * frame_w)
-        y = int((i // cols) * frame_h)
-        mosaic[y : y + frame_h, x : x + frame_w] = frame
-    return mosaic
-
-
-cv.imwrite("output/mosaic.png", make_mosaic(bs_frames, 20))
+cv.imwrite("output/bs_mosaic.png", vu.make_mosaic(bs_frames, 20))
+cv.imwrite("output/mosaic.png", vu.make_mosaic(frames, 20))
