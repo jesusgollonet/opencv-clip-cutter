@@ -1,7 +1,12 @@
 import cv2 as cv
 import numpy as np
+from cc_utils import video_utils
 
 video_path = "video/2024-01-13 08.38.31.mov.resized.mp4"
+target_fps = 2
+target_width = 128
+print(video_utils.is_video_downscaled(video_path, target_width, target_fps))
+
 
 cap = cv.VideoCapture(video_path)
 bs = cv.createBackgroundSubtractorKNN()
