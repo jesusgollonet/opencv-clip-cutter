@@ -1,17 +1,13 @@
 import cv2 as cv
 from cc_utils import video_utils as vu
-from cc_utils import metadata_utils as mu
+from cc_utils.video_metadata import VideoMetadata
 
 source_path = "video/2024-01-13 08.38.31.mov"
-mu.scaffold(source_path)
+
+meta = VideoMetadata(source_path)
 # get full path without file extension
 
-# metadata path is the same as the source path without extension
-
-metadata_path = source_path.split(".")[0]
-mu.create_folder("output")
-# create folder for video
-
+exit(0)
 
 target_path = "video/downscaled.mp4"
 clip_cutter_input_video = source_path
