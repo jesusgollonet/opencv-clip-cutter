@@ -1,10 +1,13 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
-video/*.mov
-video/*.mp4
-output/*.jpg
-output/*.png
-output/*.txt
+video/**/*.mov
+video/**/*.mp4
+video/**/*.json
+output/**/*.jpg
+output/**/*.png
+output/**/*.mov
+output/**/*.mp4
+output/**/*.txt
 .DS_Store
 
 ### Python ###
