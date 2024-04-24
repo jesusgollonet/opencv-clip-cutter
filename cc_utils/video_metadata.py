@@ -25,7 +25,8 @@ class VideoMetadata:
     # create json for metadata
     def _create_json(self):
         metadata = {
-            "original_video": {},
+            "path": self.metadata_path,
+            "original_video": {"path": self.source_path, "meta": {}},
             "resized_video": {},
             "movement_detection": {},
             "segments": [],
@@ -42,8 +43,23 @@ class VideoMetadata:
         with open(self.metadata_file, "w") as file:
             json.dump(self.metadata, file, indent=4)
 
-    def update_metadata(self, section, data):
-        """Update specific section of metadata."""
-        if section in self.metadata:
-            self.metadata[section].update(data)
-            self.save_metadata()
+    def update_metadata(self, keys, data):
+        """
+        Update metadata for nested structures.
+        `keys` should be a list of keys representing the path to the target dictionary.
+        `data` should be a dictionary of updates to be applied at the final nested level.
+        """
+
+        def recursive_update(d, keys, data):
+            key = keys[0]
+            if len(keys) == 1:
+                if key not in d:
+                    d[key] = {}
+                d[key].update(data)
+            else:
+                if key not in d:
+                    d[key] = {}
+                recursive_update(d[key], keys[1:], data)
+
+        recursive_update(self.metadata, keys, data)
+        self.save_metadata()

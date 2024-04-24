@@ -2,38 +2,47 @@ import cv2 as cv
 from cc_utils import video_utils as vu
 from cc_utils.video_metadata import VideoMetadata
 
+# abslute video path
 source_path = "video/2024-01-13 08.38.31.mov"
 
 vm = VideoMetadata(source_path)
 meta = vm.load_metadata()
-print(meta)
 
-# retrieve only width, heitght, fps and duration of the video
+if len(meta["original_video"]["meta"]) == 0:
+    vm.update_metadata(["original_video", "meta"], vu.get_video_metadata(source_path))
 
-
-print(vu.get_video_metadata(source_path))
-if len(meta["original_video"]) == 0:
-    vm.update_metadata("original_video", vu.get_video_metadata(source_path))
-
-exit(0)
-
-target_path = "video/downscaled.mp4"
 clip_cutter_input_video = source_path
-target_fps = 2
-target_width = 128
 
-if not vu.is_video_downscaled(source_path, target_width, target_fps):
+if len(meta["resized_video"]) == 0:
+    target_path = meta["path"] + "/downscaled.mp4"
+    target_fps = 2
+    target_width = 128
     vu.downscale_video(source_path, target_path, target_width, target_fps)
     clip_cutter_input_video = target_path
+    vm.update_metadata(["resized_video"], {"path": target_path})
+    vm.update_metadata(
+        ["resized_video", "meta"], vu.get_video_metadata(clip_cutter_input_video)
+    )
+else:
+    clip_cutter_input_video = meta["resized_video"]["path"]
 
 
-cap = cv.VideoCapture(target_path)
+cap = cv.VideoCapture(clip_cutter_input_video)
 bs = cv.createBackgroundSubtractorKNN()
-
 
 movement_start_threshold = 30
 movement_end_threshold = 20
 
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    fg_mask = bs.apply(frame)
+    cv.imshow("frame", fg_mask)
+    if cv.waitKey(100) & 0xFF == ord("q"):
+        break
+
+exit(0)
 movement_detected = False
 
 fps = int(cap.get(cv.CAP_PROP_FPS))
@@ -97,7 +106,7 @@ for segment_count, (start, end) in enumerate(segment_times):
     duration = end - start
     vu.cut_video_segment(
         source_path,
-        f"output/segment_{segment_count}.mp4",
+        f"{meta['path']}/segment_{segment_count}.mp4",
         vu.format_time(start),
         vu.format_time(duration),
     )

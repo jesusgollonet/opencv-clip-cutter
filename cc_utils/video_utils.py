@@ -20,31 +20,14 @@ def get_video_metadata(video_path):
         capture_output=True,
     )
     src_data = json.loads(result.stdout.decode("utf-8"))
-    stream = src_data["streams"][0]
-    w = stream["width"]
-    h = stream["height"]
-    duration = float(stream["duration"])
-    fps = convert_fps_to_int(stream["r_frame_rate"])
+    s = src_data["streams"][0]
 
     return {
-        "width": w,
-        "height": h,
-        "fps": fps,
-        "duration": duration,
+        "width": s["width"],
+        "height": s["height"],
+        "fps": convert_fps_to_int(s["r_frame_rate"]),
+        "duration": float(s["duration"]),
     }
-
-
-def is_video_downscaled(video_path, target_width, target_fps):
-    result = get_video_metadata(video_path)
-    if result.returncode != 0:
-        return False
-    str = result.stdout.decode("utf-8")
-    data = json.loads(str)
-
-    video_width = data["streams"][0]["width"]
-    video_fps = data["streams"][0]["r_frame_rate"]
-    print(convert_fps_to_int(video_fps))
-    return video_width == target_width and video_fps == target_fps
 
 
 def downscale_video(source_path, target_path, target_width, target_fps):
