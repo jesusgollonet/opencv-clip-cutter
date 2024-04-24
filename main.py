@@ -4,8 +4,16 @@ from cc_utils.video_metadata import VideoMetadata
 
 source_path = "video/2024-01-13 08.38.31.mov"
 
-meta = VideoMetadata(source_path)
-# get full path without file extension
+vm = VideoMetadata(source_path)
+meta = vm.load_metadata()
+print(meta)
+
+# retrieve only width, heitght, fps and duration of the video
+
+
+print(vu.get_video_metadata(source_path))
+if len(meta["original_video"]) == 0:
+    vm.update_metadata("original_video", vu.get_video_metadata(source_path))
 
 exit(0)
 

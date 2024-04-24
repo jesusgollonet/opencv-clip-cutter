@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 
-def is_video_downscaled(video_path, target_width, target_fps):
+def get_video_metadata(video_path):
     result = subprocess.run(
         [
             "ffprobe",
@@ -12,13 +12,30 @@ def is_video_downscaled(video_path, target_width, target_fps):
             "-select_streams",
             "v:0",
             "-show_entries",
-            "stream=r_frame_rate,width,height",
+            "stream=width,height,r_frame_rate,duration",
             "-print_format",
             "json",
             video_path,
         ],
         capture_output=True,
     )
+    src_data = json.loads(result.stdout.decode("utf-8"))
+    stream = src_data["streams"][0]
+    w = stream["width"]
+    h = stream["height"]
+    duration = float(stream["duration"])
+    fps = convert_fps_to_int(stream["r_frame_rate"])
+
+    return {
+        "width": w,
+        "height": h,
+        "fps": fps,
+        "duration": duration,
+    }
+
+
+def is_video_downscaled(video_path, target_width, target_fps):
+    result = get_video_metadata(video_path)
     if result.returncode != 0:
         return False
     str = result.stdout.decode("utf-8")
