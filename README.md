@@ -1,5 +1,7 @@
 # OPENCV CLIP CUTTER
 
+![img](doc/screenshot.png)
+
 ## Intro
 When going out for a skate or BMX session, I often set up a tripod and record
 it in order to analyze technique, check progression and find areas to improve. 
