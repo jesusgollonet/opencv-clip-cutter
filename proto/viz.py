@@ -2,7 +2,7 @@ import cv2 as cv
 import numpy as np
 
 img = cv.imread("output/mosaic.jpg")
-cap = cv.VideoCapture("video/2024-01-13 08.38.31.mov")
+cap = cv.VideoCapture("video/test.mov")
 
 bgSub = cv.createBackgroundSubtractorMOG2()
 frame_shape = (640, 360)
@@ -45,6 +45,7 @@ while True:
     text(combined, "Original", (10, 20))
     text(combined, "Bg", (w + 10, 20))
     text(combined, f"White px %: {white_px_percent:.2f}%", (w + 10, 40))
+    text(combined, f"White px over time %: {white_px_percent:.2f}%", (10, h + 10))
     cv.imshow("Video", combined)
     if cv.waitKey(1) == ord("q"):
         break
