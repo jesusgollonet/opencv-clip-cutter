@@ -20,10 +20,12 @@ while True:
 
     resized = cv.resize(frame, frame_shape)
     sub = bgSub.apply(resized)
+    white_px = cv.countNonZero(sub)
     sub = cv.cvtColor(sub, cv.COLOR_GRAY2BGR)
     combined = cv.hconcat([resized, sub])
     text(combined, "Original", (10, 20))
     text(combined, "Bg", (w + 10, 20))
+    text(combined, f"White px: {white_px}", (w + 10, 40))
     cv.imshow("Video", combined)
     if cv.waitKey(1) == ord("q"):
         break
