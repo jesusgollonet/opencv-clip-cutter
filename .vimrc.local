@@ -1,1 +1,1 @@
-map ,r :w\|!python3 main.py<cr>
+map ,r :w\|!python3 proto/viz.py<cr>
