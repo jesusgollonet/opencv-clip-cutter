@@ -57,6 +57,7 @@ segment_count = 0
 # array to store start and end times of each segment
 segment_times = []
 # store frames
+
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
 
 for i in range(total_frames):
