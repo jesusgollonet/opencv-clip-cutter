@@ -19,6 +19,9 @@ def text(frame, text, coords):
 rect_img = np.zeros((100, w * 2, 3), np.uint8)
 rect = cv.rectangle(rect_img, (0, 0), (w * 2, 100), (0, 0, 0), -1)
 c = 0
+
+white_px_pct_ar = []
+
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -27,15 +30,20 @@ while True:
     resized = cv.resize(frame, frame_shape)
     sub = bgSub.apply(resized)
     white_px = cv.countNonZero(sub)
-    white_px_percent = white_px / (w * h) * 100
+    white_px_pct = white_px / (w * h) * 100
+    white_px_pct_ar.append(white_px_pct)
 
+    mean = np.mean(white_px_pct_ar)
+    std = np.std(white_px_pct_ar)
+
+    # from here it's only about displaying
     sub = cv.cvtColor(sub, cv.COLOR_GRAY2BGR)
     graph_pct = c / total_frames
     rect_x = int(graph_pct * w * 2)
     frame_pct = cv.rectangle(
         rect_img,
         (rect_x, 100),
-        (rect_x, 100 - int(white_px_percent)),
+        (rect_x, 100 - int(white_px_pct)),
         (255, 255, 255),
         -1,
     )
@@ -44,8 +52,10 @@ while True:
     combined = cv.vconcat([combined, rect])
     text(combined, "Original", (10, 20))
     text(combined, "Bg", (w + 10, 20))
-    text(combined, f"White px %: {white_px_percent:.2f}%", (w + 10, 40))
-    text(combined, f"White px over time %: {white_px_percent:.2f}%", (10, h + 10))
+    text(combined, f"White px %: {white_px_pct:.2f}%", (w + 10, 40))
+    text(combined, f"White px over time %: {white_px_pct:.2f}%", (10, h + 10))
+    text(combined, f"mean %: {mean:.2f}%", (10, h + 30))
+    text(combined, f"standard deviation %: {std:.2f}%", (10, h + 50))
     cv.imshow("Video", combined)
     if cv.waitKey(1) == ord("q"):
         break
