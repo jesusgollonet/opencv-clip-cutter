@@ -33,16 +33,16 @@ bs = cv.createBackgroundSubtractorKNN()
 movement_start_threshold = 30
 movement_end_threshold = 20
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
-    fg_mask = bs.apply(frame)
-    cv.imshow("frame", fg_mask)
-    if cv.waitKey(100) & 0xFF == ord("q"):
-        break
+# while True:
+# ret, frame = cap.read()
+# if not ret:
+# break
+# fg_mask = bs.apply(frame)
+# cv.imshow("frame", fg_mask)
+# if cv.waitKey(100) & 0xFF == ord("q"):
+# break
 
-exit(0)
+# exit(0)
 movement_detected = False
 
 fps = int(cap.get(cv.CAP_PROP_FPS))
@@ -58,6 +58,7 @@ segment_count = 0
 segment_times = []
 # store frames
 total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
+
 for i in range(total_frames):
     # set the frame position
     cap.set(cv.CAP_PROP_POS_FRAMES, i)
@@ -96,6 +97,7 @@ for i in range(total_frames):
         cv.FILLED,
     )
 
+vm.update_metadata(["movement_detection"], {"raw_white_pixel_values": non_white_ar})
 
 # filter out segments that hav e no end time
 segment_times = [times for times in segment_times if len(times) == 2]
