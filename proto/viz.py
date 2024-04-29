@@ -1,8 +1,18 @@
 import cv2 as cv
 import numpy as np
 
-img = cv.imread("output/mosaic.jpg")
-cap = cv.VideoCapture("video/2024-02-22 21.35.35.mov")
+videos = [
+    "video/2024-01-13 08.38.31.mov",
+    "video/2024-01-13 08.41.02.mov",
+    "video/2024-01-13 08.54.35.mov",
+    "video/2024-02-22 21.35.35.mov",
+    "video/2024-02-22 22.06.36.mov",
+    "video/2024-02-23 11.59.55.mov",
+    "video/test.mov",
+]
+
+# use random video
+cap = cv.VideoCapture(videos[6])
 
 bgSub = cv.createBackgroundSubtractorMOG2()
 frame_shape = (640, 360)
@@ -83,5 +93,6 @@ while True:
     )
     # move text to random points on every frame
     cv.imshow("Video", combined)
+
     if cv.waitKey(1) == ord("q"):
         break
