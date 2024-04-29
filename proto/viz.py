@@ -24,8 +24,8 @@ def text(frame, text, coords):
     cv.putText(frame, text, coords, cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
-graph_img = np.zeros((100, frame_w * 2, 3), np.uint8)
-rect = cv.rectangle(graph_img, (0, 0), (frame_w * 2, 100), (0, 0, 0), -1)
+graph_img = np.zeros((frame_h, frame_w * 2, 3), np.uint8)
+rect = cv.rectangle(graph_img, (0, 0), (frame_w * 2, frame_h), (0, 0, 0), -1)
 c = 0
 
 white_px_pct_ar = []
@@ -42,7 +42,7 @@ while True:
     print(white_px_pct)
 
     # make lower values more visible + truncate to 100
-    white_px_pct_scaled = min(int(white_px_pct * 10), 100)
+    white_px_pct_scaled = min(int(white_px_pct * 20), frame_h)
     white_px_pct_ar.append(white_px_pct_scaled)
 
     mean = np.mean(white_px_pct_ar)
@@ -55,8 +55,8 @@ while True:
     rect_x = int(graph_pct * frame_w * 2)
     frame_pct = cv.rectangle(
         graph_img,
-        (rect_x, 100),
-        (rect_x, 100 - int(white_px_pct_scaled)),
+        (rect_x, frame_h),
+        (rect_x, frame_h - int(white_px_pct_scaled)),
         (255, 255, 255),
         -1,
     )
@@ -72,22 +72,22 @@ while True:
     text(combined, f"mean %: {mean:.2f}%", (10, frame_h + 30))
     cv.line(
         combined,
-        (0, (frame_h + 100) - int(mean)),
-        (frame_w * 2, (frame_h + 100) - int(mean)),
+        (0, (frame_h + frame_h) - int(mean)),
+        (frame_w * 2, (frame_h + frame_h) - int(mean)),
         (255, 255, 255),
         2,
     )
     cv.line(
         combined,
-        (0, (frame_h + 100) - int(median)),
-        (frame_w * 2, (frame_h + 100) - int(median)),
+        (0, (frame_h + frame_h) - int(median)),
+        (frame_w * 2, (frame_h + frame_h) - int(median)),
         (0, 255, 255),
         2,
     )
     cv.line(
         combined,
-        (0, (frame_h + 100) - int(std)),
-        (frame_w * 2, (frame_h + 100) - int(std)),
+        (0, (frame_h + frame_h) - int(std)),
+        (frame_w * 2, (frame_h + frame_h) - int(std)),
         (255, 0, 0),
         2,
     )
