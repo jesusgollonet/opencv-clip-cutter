@@ -3,6 +3,7 @@ import numpy as np
 
 # initialize vars
 videos = [
+    "video/IMG_1291.MOV",
     "video/2024-01-13 08.38.31.mov",
     "video/2024-01-13 08.41.02.mov",
     "video/2024-01-13 08.54.35.mov",
@@ -12,7 +13,7 @@ videos = [
     "video/test.mov",
 ]
 
-cap = cv.VideoCapture(videos[6])
+cap = cv.VideoCapture(videos[0])
 frame_shape = (640, 360)
 frame_w = frame_shape[0]
 frame_h = frame_shape[1]
@@ -30,6 +31,9 @@ c = 0
 
 white_px_pct_ar = []
 
+stats_window_size = 500
+
+k = 1
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -39,15 +43,15 @@ while True:
     sub = bgSub.apply(resized)
     white_px = cv.countNonZero(sub)
     white_px_pct = white_px / (frame_w * frame_h) * 100
-    print(white_px_pct)
 
     # make lower values more visible + truncate to 100
     white_px_pct_scaled = min(int(white_px_pct * 20), frame_h)
     white_px_pct_ar.append(white_px_pct_scaled)
 
-    mean = np.mean(white_px_pct_ar)
-    median = np.median(white_px_pct_ar)
-    std = np.std(white_px_pct_ar)
+    mean = np.mean(white_px_pct_ar[-stats_window_size:])
+    median = np.median(white_px_pct_ar[-stats_window_size:])
+    std = np.std(white_px_pct_ar[-stats_window_size:])
+    threshold = mean + (k * std)
 
     # from here it's only about displaying
     sub = cv.cvtColor(sub, cv.COLOR_GRAY2BGR)
@@ -67,27 +71,39 @@ while True:
 
     text(combined, "Original", (10, 20))
     text(combined, "Bg", (frame_w + 10, 20))
-    text(combined, f"White px %: {white_px_pct:.2f}%", (frame_w + 10, 40))
-    text(combined, f"White px over time %: {white_px_pct:.2f}%", (10, frame_h + 10))
-    text(combined, f"mean %: {mean:.2f}%", (10, frame_h + 30))
+
+    mean_h = frame_h + frame_h - int(mean)
+    if white_px_pct_scaled > threshold:
+        text(combined, "Movement detected", (10, frame_h + 50))
+    else:
+        text(combined, "No movement", (10, frame_h + 50))
+
     cv.line(
         combined,
-        (0, (frame_h + frame_h) - int(mean)),
-        (frame_w * 2, (frame_h + frame_h) - int(mean)),
+        (0, mean_h),
+        (frame_w * 2, mean_h),
         (255, 255, 255),
         2,
     )
+
+    # cv.line(
+    # combined,
+    # (0, (frame_h + frame_h) - int(median)),
+    # (frame_w * 2, (frame_h + frame_h) - int(median)),
+    # (0, 255, 255),
+    # 2,
+    # )
     cv.line(
         combined,
-        (0, (frame_h + frame_h) - int(median)),
-        (frame_w * 2, (frame_h + frame_h) - int(median)),
-        (0, 255, 255),
+        (0, mean_h - int(std)),
+        (frame_w * 2, mean_h - int(std)),
+        (255, 0, 0),
         2,
     )
     cv.line(
         combined,
-        (0, (frame_h + frame_h) - int(std)),
-        (frame_w * 2, (frame_h + frame_h) - int(std)),
+        (0, mean_h + int(std)),
+        (frame_w * 2, mean_h + int(std)),
         (255, 0, 0),
         2,
     )
