@@ -5,6 +5,8 @@ import sys
 import cv2 as cv
 import matplotlib
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import find_peaks
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -13,9 +15,13 @@ from cc_utils import video_utils as vu
 
 DOWNSCALE_WIDTH = 128
 DOWNSCALE_FPS = 2
-MOVEMENT_START_THRESHOLD = 30
-MOVEMENT_END_THRESHOLD = 20
 
+SMOOTH_SIGMA = 2
+SENSITIVITY = 1.5  # MAD units above the median noise floor
+END_THRESHOLD_RATIO = 0.7
+MIN_CLIP_DURATION = 1.0  # seconds
+MIN_GAP = 1.0  # seconds between segments
+WARMUP_SECONDS = 2  # KNN needs a few seconds to stabilize; excluded from stats
 
 THUMBNAIL_COUNT = 20
 
@@ -28,7 +34,7 @@ def build_motion_signal(video_path):
     sample_every = max(1, total_frames // THUMBNAIL_COUNT)
 
     signal = []
-    thumbnails = []  # list of (time_s, fg_mask_rgb)
+    thumbnails = []
     for i in range(total_frames):
         ret, frame = cap.read()
         if not ret:
@@ -43,20 +49,45 @@ def build_motion_signal(video_path):
     return np.array(signal, dtype=float), fps, thumbnails
 
 
-def detect_segments(signal, fps):
+def detect_segments(signal, fps, sensitivity=SENSITIVITY, min_clip_duration=MIN_CLIP_DURATION, min_gap=MIN_GAP):
+    smoothed = gaussian_filter1d(signal, sigma=SMOOTH_SIGMA)
+
+    # Exclude warmup frames so KNN stabilisation doesn't inflate the baseline.
+    # Use median + k*MAD (robust to outlier spikes) instead of mean + k*std.
+    warmup = int(WARMUP_SECONDS * fps)
+    stable = smoothed[warmup:] if len(smoothed) > warmup * 2 else smoothed
+    median = np.median(stable)
+    mad = np.median(np.abs(stable - median))
+    robust_std = 1.4826 * mad  # scale MAD to be comparable to std
+    start_threshold = median + sensitivity * robust_std
+    end_threshold = median + sensitivity * END_THRESHOLD_RATIO * robust_std
+
+    min_gap_frames = max(1, int(min_gap * fps))
+    min_duration_frames = max(1, int(min_clip_duration * fps))
+
+    peaks, _ = find_peaks(smoothed, height=start_threshold, distance=min_gap_frames)
+
+    raw_segments = []
+    for peak in peaks:
+        left = peak
+        while left > 0 and smoothed[left - 1] > end_threshold:
+            left -= 1
+        right = peak
+        while right < len(smoothed) - 1 and smoothed[right + 1] > end_threshold:
+            right += 1
+
+        if (right - left) >= min_duration_frames:
+            raw_segments.append((left / fps, right / fps))
+
+    # merge segments closer than min_gap
     segments = []
-    in_segment = False
-    start_frame = None
+    for start, end in raw_segments:
+        if segments and start - segments[-1][1] < min_gap:
+            segments[-1] = (segments[-1][0], max(segments[-1][1], end))
+        else:
+            segments.append((start, end))
 
-    for i, val in enumerate(signal):
-        if not in_segment and val > MOVEMENT_START_THRESHOLD:
-            in_segment = True
-            start_frame = i
-        elif in_segment and val < MOVEMENT_END_THRESHOLD:
-            in_segment = False
-            segments.append((start_frame / fps, i / fps))
-
-    return segments
+    return segments, smoothed, start_threshold, end_threshold
 
 
 def get_downscaled_path(source_path):
@@ -72,7 +103,7 @@ def ensure_downscaled(source_path):
     return downscaled
 
 
-def save_plot(signal, segments, fps, thumbnails, output_path):
+def save_plot(signal, smoothed, segments, fps, thumbnails, output_path, sensitivity, min_clip_duration, start_threshold, end_threshold):
     times = np.arange(len(signal)) / fps
     duration = times[-1]
     n = len(thumbnails)
@@ -80,51 +111,39 @@ def save_plot(signal, segments, fps, thumbnails, output_path):
     fig = plt.figure(figsize=(16, 6))
     gs = fig.add_gridspec(2, n, height_ratios=[3, 1], hspace=0.08)
 
-    ax_signal = fig.add_subplot(gs[0, :])
-    ax_signal.plot(times, signal, color="steelblue", linewidth=0.8, label="motion signal")
+    ax = fig.add_subplot(gs[0, :])
 
-    labeled = False
+    ax.plot(times, signal, color="steelblue", linewidth=0.6, alpha=0.35, label="raw signal")
+    ax.plot(times, smoothed, color="steelblue", linewidth=1.2, label="smoothed signal")
+
+    labeled_seg = False
+    labeled_start = False
+    labeled_end = False
     for start, end in segments:
-        ax_signal.axvspan(
-            start,
-            end,
-            alpha=0.3,
-            color="orange",
-            label="detected segment" if not labeled else "_",
-        )
-        labeled = True
+        ax.axvspan(start, end, alpha=0.2, color="orange", label="detected segment" if not labeled_seg else "_")
+        ax.axvline(start, color="orange", linewidth=1.2, linestyle="-", label="segment boundary" if not labeled_start else "_")
+        ax.axvline(end, color="orange", linewidth=1.2, linestyle="-", label="_")
+        labeled_seg = True
+        labeled_start = True
 
-    ax_signal.axhline(
-        MOVEMENT_START_THRESHOLD,
-        color="red",
-        linewidth=1,
-        linestyle="--",
-        label=f"start threshold ({MOVEMENT_START_THRESHOLD})",
-    )
-    ax_signal.axhline(
-        MOVEMENT_END_THRESHOLD,
-        color="salmon",
-        linewidth=1,
-        linestyle=":",
-        label=f"end threshold ({MOVEMENT_END_THRESHOLD})",
-    )
+    ax.axhline(start_threshold, color="red", linewidth=1, linestyle="--", label=f"start threshold ({start_threshold:.0f}px, sensitivity={sensitivity})")
+    ax.axhline(end_threshold, color="salmon", linewidth=1, linestyle=":", label=f"end threshold ({end_threshold:.0f}px)")
 
-    ax_signal.set_xlim(0, duration)
-    ax_signal.set_ylabel("white pixels")
-    ax_signal.set_title(f"Motion signal — {len(segments)} segment(s) detected")
-    ax_signal.set_xticks([])
-    ax_signal.legend(loc="upper right")
+    ax.set_xlim(0, duration)
+    ax.set_ylabel("white pixels")
+    ax.set_title(f"Motion signal — {len(segments)} segment(s) detected  |  sensitivity={sensitivity}  min_clip={min_clip_duration}s")
+    ax.set_xticks([])
+    ax.legend(loc="upper right", fontsize=8)
 
     for i, (t, mask_rgb) in enumerate(thumbnails):
-        ax = fig.add_subplot(gs[1, i])
-        ax.imshow(mask_rgb, cmap="gray", vmin=0, vmax=255)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_xlabel(f"{t:.0f}s", fontsize=8)
-        # highlight border if inside a detected segment
+        ax_thumb = fig.add_subplot(gs[1, i])
+        ax_thumb.imshow(mask_rgb, cmap="gray", vmin=0, vmax=255)
+        ax_thumb.set_xticks([])
+        ax_thumb.set_yticks([])
+        ax_thumb.set_xlabel(f"{t:.0f}s", fontsize=8)
         in_seg = any(start <= t <= end for start, end in segments)
         color = "orange" if in_seg else "#cccccc"
-        for spine in ax.spines.values():
+        for spine in ax_thumb.spines.values():
             spine.set_visible(True)
             spine.set_edgecolor(color)
             spine.set_linewidth(2)
@@ -139,11 +158,10 @@ def main():
         description="Cut clips from a session video using motion detection."
     )
     parser.add_argument("video_path", help="Path to the source video file")
-    parser.add_argument(
-        "--plot",
-        action="store_true",
-        help="Save a detection plot instead of cutting clips",
-    )
+    parser.add_argument("--plot", action="store_true", help="Save a detection plot instead of cutting clips")
+    parser.add_argument("--sensitivity", type=float, default=SENSITIVITY, help=f"Std deviations above noise floor to start a segment (default: {SENSITIVITY})")
+    parser.add_argument("--min-clip-duration", type=float, default=MIN_CLIP_DURATION, dest="min_clip_duration", help=f"Minimum clip length in seconds (default: {MIN_CLIP_DURATION})")
+    parser.add_argument("--min-gap", type=float, default=MIN_GAP, dest="min_gap", help=f"Minimum gap between segments in seconds (default: {MIN_GAP})")
     args = parser.parse_args()
 
     if not os.path.exists(args.video_path):
@@ -154,12 +172,12 @@ def main():
 
     print("Analyzing motion...")
     signal, fps, thumbnails = build_motion_signal(analysis_video)
-    segments = detect_segments(signal, fps)
+    segments, smoothed, start_threshold, end_threshold = detect_segments(signal, fps, args.sensitivity, args.min_clip_duration, args.min_gap)
     print(f"Detected {len(segments)} segment(s)")
 
     if args.plot:
         plot_path = os.path.splitext(args.video_path)[0] + ".plot.png"
-        save_plot(signal, segments, fps, thumbnails, plot_path)
+        save_plot(signal, smoothed, segments, fps, thumbnails, plot_path, args.sensitivity, args.min_clip_duration, start_threshold, end_threshold)
     else:
         print("Clip cutting not yet implemented — use --plot to inspect detection.")
 
