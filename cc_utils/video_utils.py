@@ -30,28 +30,31 @@ def get_video_metadata(video_path):
     }
 
 
-def downscale_video(source_path, target_path, target_width, target_fps):
+def downscale_video(source_path, target_path, target_width, target_fps, quiet=False):
+    command = [
+        "ffmpeg",
+        "-i",
+        source_path,
+        "-vf",
+        f"fps={target_fps},scale={target_width}:-1",
+        "-c:v",
+        "libx264",
+        "-crf",
+        "17",
+        "-preset",
+        "veryfast",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-ac",
+        "2",
+        target_path,
+    ]
     result = subprocess.run(
-        [
-            "ffmpeg",
-            "-i",
-            source_path,
-            "-vf",
-            f"fps={target_fps},scale={target_width}:-1",
-            "-c:v",
-            "libx264",
-            "-crf",
-            "17",
-            "-preset",
-            "veryfast",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            "-ac",
-            "2",
-            target_path,
-        ],
+        command,
+        stdout=subprocess.DEVNULL if quiet else None,
+        stderr=subprocess.DEVNULL if quiet else None,
     )
     return result.returncode == 0
 

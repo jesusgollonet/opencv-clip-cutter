@@ -2,6 +2,11 @@ import argparse
 import os
 import sys
 
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/opencv-clip-cutter-matplotlib")
+os.environ.setdefault("XDG_CACHE_HOME", "/tmp/opencv-clip-cutter-cache")
+os.makedirs(os.environ["MPLCONFIGDIR"], exist_ok=True)
+os.makedirs(os.environ["XDG_CACHE_HOME"], exist_ok=True)
+
 import cv2 as cv
 import matplotlib
 import numpy as np
@@ -95,11 +100,12 @@ def get_downscaled_path(source_path):
     return f"{base}.downscaled.mp4"
 
 
-def ensure_downscaled(source_path):
+def ensure_downscaled(source_path, quiet=False):
     downscaled = get_downscaled_path(source_path)
     if not os.path.exists(downscaled):
-        print("Downscaling video for analysis...")
-        vu.downscale_video(source_path, downscaled, DOWNSCALE_WIDTH, DOWNSCALE_FPS)
+        if not quiet:
+            print("Downscaling video for analysis...")
+        vu.downscale_video(source_path, downscaled, DOWNSCALE_WIDTH, DOWNSCALE_FPS, quiet=quiet)
     return downscaled
 
 
