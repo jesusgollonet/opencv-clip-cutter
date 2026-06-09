@@ -31,6 +31,10 @@ class Segment:
     def duration(self):
         return max(0.0, self.end - self.start)
 
+    @property
+    def center(self):
+        return (self.start + self.end) / 2
+
 
 @dataclass(frozen=True)
 class VideoMetadata:
@@ -172,11 +176,20 @@ def relaxed_duration_score(expected, detected, boundary_tolerance):
     return min(overlap_score, duration_similarity(expected, detected))
 
 
+def coverage_score(expected, detected, boundary_tolerance):
+    tolerant_expected = expand_segment(expected, boundary_tolerance)
+    if detected.duration <= 0:
+        return 0.0
+    return min(1.0, overlap_duration(tolerant_expected, detected) / detected.duration)
+
+
 def segment_score(expected, detected, metric, boundary_tolerance):
     if metric == "iou":
         return iou(expected, detected)
     if metric == "duration":
         return relaxed_duration_score(expected, detected, boundary_tolerance)
+    if metric == "coverage":
+        return coverage_score(expected, detected, boundary_tolerance)
     raise ValueError(f"Unsupported match metric: {metric}")
 
 
@@ -186,12 +199,14 @@ def match_segments(expected, detected, threshold, metric, boundary_tolerance):
         for detected_index, detected_segment in enumerate(detected):
             score = segment_score(expected_segment, detected_segment, metric, boundary_tolerance)
             if score >= threshold:
-                candidates.append((score, expected_index, detected_index))
+                tie_break_iou = iou(expected_segment, detected_segment)
+                center_distance = abs(expected_segment.center - detected_segment.center)
+                candidates.append((score, tie_break_iou, -center_distance, expected_index, detected_index))
 
     matches = []
     used_expected = set()
     used_detected = set()
-    for score, expected_index, detected_index in sorted(candidates, reverse=True):
+    for score, _, _, expected_index, detected_index in sorted(candidates, reverse=True):
         if expected_index in used_expected or detected_index in used_detected:
             continue
         used_expected.add(expected_index)
@@ -267,7 +282,7 @@ def evaluate_video(video_path, csv_path, args):
     print(f"\n{video_path}")
     print(f"  labels:          {csv_path}")
     print(f"  match metric:    {args.match_metric}")
-    if args.match_metric == "duration":
+    if args.match_metric != "iou":
         print(f"  boundary tol.:   {args.boundary_tolerance:.2f}s")
     print(f"  manual segments: {len(expected)}")
     print(f"  detected:        {len(detected)}")
@@ -311,15 +326,18 @@ def main():
     )
     parser.add_argument(
         "--match-metric",
-        choices=("iou", "duration"),
+        choices=("iou", "duration", "coverage"),
         default="iou",
-        help="Segment matching metric: strict interval IoU or relaxed duration similarity (default: iou)",
+        help=(
+            "Segment matching metric: strict interval IoU, relaxed duration similarity, "
+            "or detected-clip coverage (default: iou)"
+        ),
     )
     parser.add_argument(
         "--match-threshold",
         type=float,
         default=None,
-        help="Minimum score for a match (default: 0.5 for iou, 0.7 for duration)",
+        help="Minimum score for a match (default: 0.5 for iou, 0.7 for duration, 0.8 for coverage)",
     )
     parser.add_argument(
         "--iou-threshold",
@@ -331,7 +349,7 @@ def main():
         "--boundary-tolerance",
         type=float,
         default=2.0,
-        help="Seconds to expand manual labels when using --match-metric duration (default: 2.0)",
+        help="Seconds to expand manual labels when using relaxed match metrics (default: 2.0)",
     )
     parser.add_argument(
         "--label-units",
@@ -353,7 +371,12 @@ def main():
     if args.match_threshold is None:
         args.match_threshold = args.iou_threshold
     if args.match_threshold is None:
-        args.match_threshold = 0.5 if args.match_metric == "iou" else 0.7
+        default_thresholds = {
+            "iou": 0.5,
+            "duration": 0.7,
+            "coverage": 0.8,
+        }
+        args.match_threshold = default_thresholds[args.match_metric]
     if args.boundary_tolerance < 0:
         parser.error("--boundary-tolerance must be non-negative")
 
@@ -387,7 +410,7 @@ def main():
     print("\nSummary")
     print(f"  videos:          {len(label_sets)}")
     print(f"  match metric:    {args.match_metric}")
-    if args.match_metric == "duration":
+    if args.match_metric != "iou":
         print(f"  boundary tol.:   {args.boundary_tolerance:.2f}s")
     print(f"  match threshold: {args.match_threshold:.3f}")
     print(f"  manual segments: {totals['manual']}")

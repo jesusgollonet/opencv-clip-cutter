@@ -150,3 +150,15 @@ python3 tools/validate_iou.py video/pre-segmented \
   --boundary-tolerance 2.0 \
   --details
 ```
+
+When manual labels are broad attempt windows and the detector is expected to
+find only the active motion inside those windows, use coverage matching. This
+scores how much of the detected clip falls inside a manual label:
+
+```bash
+python3 tools/validate_iou.py video/pre-segmented \
+  --match-metric coverage \
+  --match-threshold 0.8 \
+  --boundary-tolerance 2.0 \
+  --details
+```
