@@ -123,16 +123,30 @@ The validator:
 - reads LosslessCut `Start,End,Name` CSV files
 - auto-detects whether `Start` and `End` are frames or seconds
 - runs the current motion detector
-- greedily matches manual and detected segments by highest IoU
-- reports matches, misses, false positives, precision, recall, and average IoU
+- greedily matches manual and detected segments by highest score
+- reports matches, misses, false positives, precision, recall, and average score
 
 Useful options:
 
 ```bash
 python3 tools/validate_iou.py video/pre-segmented \
-  --iou-threshold 0.5 \
+  --match-metric iou \
+  --match-threshold 0.5 \
   --sensitivity 0.4 \
   --min-clip-duration 1.0 \
   --min-gap 2.0 \
+  --details
+```
+
+For labels with imprecise boundaries, use duration-based matching. This still
+requires the detected segment to overlap the manual label after a small boundary
+tolerance, but it scores the match by rough clip length instead of exact frame
+alignment:
+
+```bash
+python3 tools/validate_iou.py video/pre-segmented \
+  --match-metric duration \
+  --match-threshold 0.7 \
+  --boundary-tolerance 2.0 \
   --details
 ```
