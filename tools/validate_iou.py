@@ -263,7 +263,7 @@ def main():
         default="auto",
         help="Units used by the label CSV Start/End columns (default: auto)",
     )
-    parser.add_argument("--sensitivity", type=float, default=1.5, help="Detector sensitivity (default: 1.5)")
+    parser.add_argument("--sensitivity", type=float, default=0.4, help="Detector sensitivity (default: 0.4)")
     parser.add_argument(
         "--min-clip-duration",
         type=float,

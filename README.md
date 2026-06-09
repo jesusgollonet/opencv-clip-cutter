@@ -72,14 +72,14 @@ detected segments, and thumbnail masks sampled across the video.
 ```bash
 python3 main.py path/to/session-video.mp4 \
   --plot \
-  --sensitivity 1.5 \
+  --sensitivity 0.4 \
   --min-clip-duration 1.0 \
   --min-gap 1.0
 ```
 
 - `--plot`: save a detection plot instead of attempting to cut clips.
 - `--sensitivity`: motion threshold in MAD units above the median noise floor.
-  Lower values detect more motion; higher values are stricter. Default: `1.5`.
+  Lower values detect more motion; higher values are stricter. Default: `0.4`.
 - `--min-clip-duration`: ignore detected segments shorter than this many
   seconds. Default: `1.0`.
 - `--min-gap`: merge segments separated by less than this many seconds.
@@ -88,9 +88,9 @@ python3 main.py path/to/session-video.mp4 \
 ## Tuning workflow
 
 1. Start with `--plot` and the defaults.
-2. If attempts are missed, lower `--sensitivity`, for example `1.0`.
+2. If attempts are missed, lower `--sensitivity`, for example `0.2`.
 3. If background motion creates false positives, raise `--sensitivity`, for
-   example `2.0`.
+   example `0.8`.
 4. Increase `--min-clip-duration` to ignore short spikes.
 5. Increase `--min-gap` when one attempt is split into multiple segments.
 
@@ -131,7 +131,7 @@ Useful options:
 ```bash
 python3 tools/validate_iou.py video/pre-segmented \
   --iou-threshold 0.5 \
-  --sensitivity 1.2 \
+  --sensitivity 0.4 \
   --min-clip-duration 1.0 \
   --min-gap 2.0 \
   --details

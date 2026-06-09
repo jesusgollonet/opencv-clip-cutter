@@ -21,9 +21,11 @@ from cc_utils import video_utils as vu
 DOWNSCALE_WIDTH = 128
 DOWNSCALE_FPS = 2
 
-SMOOTH_SIGMA = 2
-SENSITIVITY = 1.5  # MAD units above the median noise floor
-END_THRESHOLD_RATIO = 0.7
+SMOOTH_SIGMA = 1.5
+SENSITIVITY = 0.4  # MAD units above the median noise floor
+END_THRESHOLD_RATIO = 0.05
+SEGMENT_START_PADDING = 0.0
+SEGMENT_END_PADDING = 1.0
 MIN_CLIP_DURATION = 1.0  # seconds
 MIN_GAP = 1.0  # seconds between segments
 WARMUP_SECONDS = 2  # KNN needs a few seconds to stabilize; excluded from stats
@@ -82,7 +84,10 @@ def detect_segments(signal, fps, sensitivity=SENSITIVITY, min_clip_duration=MIN_
             right += 1
 
         if (right - left) >= min_duration_frames:
-            raw_segments.append((left / fps, right / fps))
+            max_time = (len(smoothed) - 1) / fps
+            start = max(0.0, left / fps - SEGMENT_START_PADDING)
+            end = min(max_time, right / fps + SEGMENT_END_PADDING)
+            raw_segments.append((start, end))
 
     # merge segments closer than min_gap
     segments = []
